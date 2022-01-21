@@ -134,6 +134,12 @@ echo $port > /opt/piavpn-manual/port_forwarding || exit 1
 # store port expiration
 echo $expires_at >> /opt/piavpn-manual/port_forwarding
 
+if [ -n "$PF_CALLBACK" ]; then
+    # Execute the specified callback script
+    export PF_PORT=$port
+    /usr/bin/env bash -c "$PF_CALLBACK"
+fi
+
 echo -ne "
 Signature ${GREEN}$signature${NC}
 Payload   ${GREEN}$payload${NC}
