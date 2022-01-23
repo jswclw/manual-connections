@@ -138,7 +138,7 @@ echo -n "Trying to write /etc/wireguard/pia.conf..."
 mkdir -p /etc/wireguard
 echo "
 [Interface]
-Address = $(echo "$wireguard_json" | jq -r '.peer_ip')
+Address = $peer_ip
 PrivateKey = $privKey
 $dnsSettingForVPN
 [Peer]
