@@ -1,4 +1,4 @@
-FROM alpine:3.15
+FROM lsiobase/alpine:3.15
 
 RUN apk update && apk add \
     bash \
@@ -19,12 +19,15 @@ RUN apk update && apk add \
 # To avoid confusion, also suppress the error message that displays even when pre-set to 1 on container creation
 #RUN sed -i 's/cmd sysctl.*/set +e \&\& sysctl -q net.ipv4.conf.all.src_valid_mark=1 \&> \/dev\/null \&\& set -e/' /usr/bin/wg-quick
 
-HEALTHCHECK --interval=30s --timeout=10s --start-period=30s CMD ping -I wg0 -c 1 www.google.com || exit 1
-
 WORKDIR /pia
 COPY . .
 
 STOPSIGNAL SIGKILL
 
-ENTRYPOINT echo -n "Waiting for network..."; until curl -s http://google.com >/dev/null; do echo -n "*"; sleep 5; done; echo "ready!"; ./run_setup.sh
+ENTRYPOINT /pia/container_start.sh
+#ENTRYPOINT echo -n "Waiting for network..."; until curl -s http://google.com >/dev/null; do echo -n "*"; sleep 5; done; echo "ready!"; ./run_setup.sh
 #ENTRYPOINT while (true) do echo -n "*"; sleep 1; done;
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s CMD ping -I pia -c 1 www.google.com || exit 1
+
+
