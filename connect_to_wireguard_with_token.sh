@@ -141,11 +141,14 @@ echo "
 Address = $peer_ip
 PrivateKey = $privKey
 $dnsSettingForVPN
+PreUp = ip route add $server_ip via $(ip route | awk '/default/ { print $3 }') dev $(ip route | awk '/default/ { print $5 }')
+PostDown = ip route delete $server_ip
+
 [Peer]
 PersistentKeepalive = 25
-PublicKey = $(echo "$wireguard_json" | jq -r '.server_key')
-AllowedIPs = 0.0.0.0/0
-Endpoint = ${WG_SERVER_IP}:$(echo "$wireguard_json" | jq -r '.server_port')
+PublicKey = $server_public_key
+AllowedIPs = 0.0.0.0/1, 128.0.0.0/1
+Endpoint = $server_ip:$server_port
 " > /etc/wireguard/pia.conf || exit 1
 echo -e ${GREEN}OK!${NC}
 
