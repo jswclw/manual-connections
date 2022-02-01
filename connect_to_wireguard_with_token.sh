@@ -106,6 +106,12 @@ if [ "$(echo "$wireguard_json" | jq -r '.status')" != "OK" ]; then
   exit 1
 fi
 
+peer_ip="$(echo "$wireguard_json" | jq -r .peer_ip )"
+server_public_key="$(echo "$wireguard_json" | jq -r .server_key )"
+server_ip="$(echo "$wireguard_json" | jq -r .server_ip )"
+server_port="$(echo "$wireguard_json" | jq -r .server_port )"
+pfapi_ip="$(echo "$wireguard_json" | jq -r .server_vip )"
+
 # Multi-hop is out of the scope of this repo, but you should be able to
 # get multi-hop running with both WireGuard and OpenVPN by playing with
 # these scripts. Feel free to fork the project and test it out.
@@ -132,14 +138,17 @@ echo -n "Trying to write /etc/wireguard/pia.conf..."
 mkdir -p /etc/wireguard
 echo "
 [Interface]
-Address = $(echo "$wireguard_json" | jq -r '.peer_ip')
+Address = $peer_ip
 PrivateKey = $privKey
 $dnsSettingForVPN
+PreUp = ip route add $server_ip via $(ip route | awk '/default/ { print $3 }') dev $(ip route | awk '/default/ { print $5 }')
+PostDown = ip route delete $server_ip
+
 [Peer]
 PersistentKeepalive = 25
-PublicKey = $(echo "$wireguard_json" | jq -r '.server_key')
-AllowedIPs = 0.0.0.0/0
-Endpoint = ${WG_SERVER_IP}:$(echo "$wireguard_json" | jq -r '.server_port')
+PublicKey = $server_public_key
+AllowedIPs = 0.0.0.0/1, 128.0.0.0/1
+Endpoint = $server_ip:$server_port
 " > /etc/wireguard/pia.conf || exit 1
 echo -e ${GREEN}OK!${NC}
 
@@ -164,7 +173,7 @@ To disconnect the VPN, run:
 if [ "$PIA_PF" != true ]; then
   echo If you want to also enable port forwarding, you can start the script:
   echo -e $ ${GREEN}PIA_TOKEN=$PIA_TOKEN \
-    PF_GATEWAY=$WG_SERVER_IP \
+    PF_GATEWAY=$pfapi_ip \
     PF_HOSTNAME=$WG_HOSTNAME \
     ./port_forwarding.sh${NC}
   echo
@@ -185,11 +194,11 @@ echo
 
 echo -e "Starting procedure to enable port forwarding by running the following command:
 $ ${GREEN}PIA_TOKEN=$PIA_TOKEN \\
-  PF_GATEWAY=$WG_SERVER_IP \\
+  PF_GATEWAY=$pfapi_ip \\
   PF_HOSTNAME=$WG_HOSTNAME \\
   ./port_forwarding.sh${NC}"
 
 PIA_TOKEN=$PIA_TOKEN \
-  PF_GATEWAY=$WG_SERVER_IP \
+  PF_GATEWAY=$pfapi_ip \
   PF_HOSTNAME=$WG_HOSTNAME \
   ./port_forwarding.sh

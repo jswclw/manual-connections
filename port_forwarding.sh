@@ -134,32 +134,38 @@ echo $port > /opt/piavpn-manual/port_forwarding || exit 1
 # store port expiration
 echo $expires_at >> /opt/piavpn-manual/port_forwarding
 
-if [ -n "$PF_CALLBACK" ]; then
-    # Execute the specified callback script
-    export PF_PORT=$port
-    /usr/bin/env bash -c "$PF_CALLBACK"
+if [ ! -z "$PORT_FILE" ]; then
+    # Emit the port number to the $PORT_FILE
+    echo "$port" >$PORT_FILE
 fi
 
-echo -ne "
-Signature ${GREEN}$signature${NC}
-Payload   ${GREEN}$payload${NC}
+if [ ! -z "$PORT_SCRIPT" ]; then
+    # Execute the specified callback script
+    export PF_PORT=$port
+    /usr/bin/env bash -c "$PORT_SCRIPT"
+fi
+
+echo -e "
 
 --> The port is ${GREEN}$port${NC} and it will expire on ${RED}$expires_at${NC}. <--
 
-Trying to bind the port... "
+${GREEN}This script will need to remain active to use port forwarding, and will re-bind the port every 15 minutes.${NC}
+
+"
 
 # Now we have all required data to create a request to bind the port.
 # We will repeat this request every 15 minutes, in order to keep the port
 # alive. The servers have no mechanism to track your activity, so they
 # will just delete the port forwarding if you don't send keepalives.
 while true; do
+  echo -ne "$(date '+%H:%M')...Binding..."
+
   bind_port_response="$(curl -Gs -m 5 \
     --connect-to "$PF_HOSTNAME::$PF_GATEWAY:" \
     --cacert "ca.rsa.4096.crt" \
     --data-urlencode "payload=${payload}" \
     --data-urlencode "signature=${signature}" \
     "https://${PF_HOSTNAME}:19999/bindPort")"
-    echo -e "${GREEN}OK!${NC}"
 
     # If port did not bind, just exit the script.
     # This script will exit in 2 months, since the port will expire.
@@ -170,11 +176,9 @@ while true; do
       rm -f /opt/piavpn-manual/port_forwarding
       exit 1
     fi
-    echo -e Forwarded port'\t'${GREEN}$port${NC}
-    echo -e Refreshed on'\t'${GREEN}$(date)${NC}
-    echo -e Expires on'\t'${RED}$(date --date="$expires_at")${NC}
-    echo -e "\n${GREEN}This script will need to remain active to use port forwarding, and will refresh every 15 minutes.${NC}\n"
 
+    echo -ne ${GREEN}OK!${NC}...$(echo "$bind_port_response" | jq -r '.message')...sleeping..
+    
     # sleep 15 minutes
-    sleep 900
+    for i in {1..15}; do echo -n "."; sleep 60; done; echo
 done
