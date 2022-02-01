@@ -1,3 +1,9 @@
+# Private Internet Access (PIA) VPN
+
+This is a wrapper around the pia-foss/manual-connections project which puts the functionality in a docker container. That container can then be used as the network for other containers, effectiuvely putting them on the VPN as establisted by the pia-vpn container.
+
+The source for this project was branched from the pia-foss/manual-connections project. Changes to the scipts in the original project are minimal so that future updates to the base scipts can easily be merged and update published. The default entry point is the run_setup.sh script which will establish a connection in accordance with your variable settings. All of the variables are mentioned below can be set as environment variables.
+
 # Manual PIA VPN Connections
 
 This repository contains documentation on how to create native WireGuard and OpenVPN connections, and also on how to enable Port Forwarding in case you require this feature. You will find a lot of information below. However if you prefer quick test, here is the __TL/DR__:
